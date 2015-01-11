@@ -3,4 +3,4 @@
 *.diff
 *.orig
 *.patch
-*.swp
+*.sw*
