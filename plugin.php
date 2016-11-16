@@ -1,14 +1,20 @@
 <?php
 /*
-Plugin Name: Boxzilla, Wrapped
+Plugin Name: Boxzilla Custom Classes
 Plugin URI: https://conversionready.com
-Description: Uses `add_filter boxzilla_box_content` to wrap box content into a customizable `<div>`
-Version: 2016.11.14
+Description: Uses `boxzilla_box_client_options` and Boxzilla JS API to inject custom classes for styling. Adds post slug and title classes by default.
+Version: 2016.11.16
 Author: Leho Kraav
 Author URI: https://conversionready.com
 */
 
-final class Boxzilla_Wrapped {
+final class Boxzilla_Custom_Classes {
+
+    private static $plugin_dir_path;
+
+    private static $plugin_dir_url;
+
+    private static $slug;
 
     /**
      * @since 2016.11.14
@@ -19,62 +25,36 @@ final class Boxzilla_Wrapped {
             return;
         }
 
+        static::$plugin_dir_path = untrailingslashit( plugin_dir_path( __FILE__ ) );
+
+        static::$plugin_dir_url = untrailingslashit( plugin_dir_url( __FILE__ ) );
+
+        static::$slug = basename( static::$plugin_dir_path );
+
         /**
-         * Example default output
-         *
-         * <div id="boxzilla-wrap-3439" class="boxzilla-slug-some-title-here boxzilla-title-some-title-here boxzilla-wrap">
-         *     {$content}
-         * </div>
-         *
-         * In translation scenarios, it may make sense to have a separate fixed
-         * slug for commong styling vs localized human-readable titles
-         *
-         * @since 2016.11.14
+         * @since 2016.11.16
          */
-        add_filter( 'boxzilla_box_content', function( $content, $box ) {
+        add_filter( 'boxzilla_box_client_options', function( $client_options, $box ) {
 
-            $attr['id'] = 'boxzilla-wrap-' . $box->ID;
-
-            $attr['class'] = [
-                'boxzilla-slug-' . get_post_field( 'post_name', $box->ID ),
-                'boxzilla-title-' . sanitize_title( $box->title ),
-                'boxzilla-wrap',
+            $client_options['class'] = [
+                'slug' => get_post_field( 'post_name', $box->ID ),
+                'title' => sanitize_title( get_post_field( 'post_title', $box->ID ) ),
             ];
 
-            $attr = apply_filters( 'boxzilla_wrap_attr', $attr );
-
-            $content = sprintf( '<div %1$s>%2$s</div>',
-                static::attr2text( $attr ),
-                $content
-            );
-
-            return $content;
+            return $client_options;
 
         }, 10, 2 );
 
-    }
-
-    /**
-     * @since 2016.11.14
-     */
-    private static function attr2text( $attr ) {
-
-        $out = '';
-
-        foreach ( $attr as $name => $value ) {
-
-            if ( is_array( $value ) ) {
-                $value = join( ' ', $value );
-            }
-
-            $out .= $value ? sprintf( ' %s="%s"', esc_html( $name ), esc_attr( $value ) ) : esc_html( " {$name}" );
-
-        }
-
-        return trim( $out );
+        /**
+         * @see https://github.com/ibericode/boxzilla.js/issues/14
+         * @since 2016.11.16
+         */
+        add_action( 'wp_enqueue_scripts', function() {
+            wp_enqueue_script( static::$slug, static::$plugin_dir_url . '/script.js', [ 'boxzilla' ], '2016.11.16' );
+        } );
 
     }
 
 }
 
-add_action( 'plugins_loaded', [ 'Boxzilla_Wrapped', 'plugins_loaded' ] );
+add_action( 'plugins_loaded', [ 'Boxzilla_Custom_Classes', 'plugins_loaded' ] );
